@@ -453,12 +453,12 @@ python Training/upperbody_training_beta10.py \
 
 ## 5. Comparison with Previous Methods
 
-| Item | Previous Method (No β) | β[0] Only | 10-Dimensional β (This Method) |
-|------|----------------------|-----------|-------------------------------|
-| Input Channels | 6 | 7 | **16** |
-| Body Shape Info | None | Body thickness only | **All 10 dimensions** |
-| β Values | - | Fixed [2,0,...,0] | **BEV estimated values** |
-| Body Adaptability | Low | Medium | **High** |
+| Item | Previous Method (No β) |  10-Dimensional β (This Method) |
+|------|----------------------|-------------------------------|
+| Input Channels | 6 | **16** |
+| Body Shape Info | None | **All 10 dimensions** |
+| β Values | - | **BEV estimated values** |
+| Body Adaptability | Low | **High** |
 
 ---
 
