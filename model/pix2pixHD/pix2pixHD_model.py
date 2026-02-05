@@ -184,10 +184,13 @@ class Pix2PixHDModel(BaseModel):
         loss_G_VGG = 0
         normalized=True
         if not self.opt.no_vgg_loss:
+            # VGGはRGB 3チャネル前提なので、出力が4チャネル(RGB+mask)のときは先頭3チャネルのみを使用する
+            vgg_fake = fake_image[:, :3, :, :]
+            vgg_real = real_image[:, :3, :, :]
             if normalized:
-                loss_G_VGG = self.criterionVGG(fake_image*0.5+1.0, real_image*0.5+1.0) * self.opt.lambda_feat
+                loss_G_VGG = self.criterionVGG(vgg_fake*0.5+1.0, vgg_real*0.5+1.0) * self.opt.lambda_feat
             else:
-                loss_G_VGG = self.criterionVGG(fake_image, real_image) * self.opt.lambda_feat
+                loss_G_VGG = self.criterionVGG(vgg_fake, vgg_real) * self.opt.lambda_feat
         
         # Only return the fake_B image if necessary to save BW
         return [ self.loss_filter( loss_G_GAN, loss_G_GAN_Feat, loss_G_VGG, loss_D_real, loss_D_fake ), None if not infer else fake_image ]

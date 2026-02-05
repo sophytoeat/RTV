@@ -9,14 +9,16 @@ import torch.utils.data as data
 from PIL import Image
 from util.densepose_util import IUV2UpperBodyImg, IUV2TorsoLeg, IUV2Img,IUV2SDP,IUV2SSDP
 from util.cv2_trans_util import get_inverse_trans
+from util.beta_utils import beta_to_tensor
 import cv2
 import json
 
 class UpperBodyGarment(data.Dataset):
-    def __init__(self,path,img_size=512):
+    def __init__(self,path,img_size=512, use_beta=False):
         self.simplified_dp=True
         self.img_dir = path
         self.image_list = self.__get_image_list()
+        self.use_beta = use_beta  # Whether to use β parameters
         self.transform = transforms.Compose([
             transforms.Resize(img_size),
             transforms.ToTensor(),
@@ -27,6 +29,12 @@ class UpperBodyGarment(data.Dataset):
             dataset_info=json.load(f)
         self.raw_height=dataset_info['height']
         self.raw_width=dataset_info['width']
+        self.img_size = img_size
+        # Check if dataset has β parameters
+        self.has_beta = dataset_info.get('has_beta', False)
+        if use_beta and not self.has_beta:
+            print(f"Warning: Dataset {path} does not have β parameters. Setting use_beta=False.")
+            self.use_beta = False
 
     def __getitem__(self, index):
         garment_path = self.image_list[index]
@@ -83,7 +91,18 @@ class UpperBodyGarment(data.Dataset):
             roi_vm_img = roi_vm_img.cuda()
             roi_mask_img = roi_mask_img.cuda()
             roi_dp_img = roi_dp_img.cuda()
-        return self._normalize(roi_garment_img),self._normalize(roi_vm_img),self._normalize(roi_dp_img),roi_mask_img
+        
+        # Load β parameters if available and enabled
+        if self.use_beta and self.has_beta:
+            beta_path = os.path.join(self.img_dir, (os.path.basename(self.image_list[index])).split('_')[0] + '_beta.npy')
+            if os.path.exists(beta_path):
+                beta = np.load(beta_path).astype(np.float32)
+            else:
+                beta = np.zeros(10, dtype=np.float32)
+            return self._normalize(roi_garment_img), self._normalize(roi_vm_img), self._normalize(roi_dp_img), roi_mask_img, beta
+
+        # If beta is disabled, keep backward-compatible 4-tuple output
+        return self._normalize(roi_garment_img), self._normalize(roi_vm_img), self._normalize(roi_dp_img), roi_mask_img
 
     def _normalize(self, x):
         # map from 0,1 to -1,1

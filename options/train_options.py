@@ -25,6 +25,8 @@ class TrainOptions(BaseOptions):
         self.parser.add_argument('--dataset_path', type=str, default=None)
         self.parser.add_argument('--img_size', type=int, default=512,
                                  help='image size during training')
+        self.parser.add_argument('--use_beta', action='store_true', 
+                                 help='use SMPL β parameters as Body Shape Feature Map (I_β) in Extended Hybrid Representation')
 
         # for discriminators        
         self.parser.add_argument('--num_D', type=int, default=2, help='number of discriminators to use')

@@ -1,0 +1,78 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Byte-compiled / optimized / DLL files
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyTorch / Model checkpoints
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+pretrained_models/
+
+# Data and outputs
+PerGarmentDatasets/
+extracted_betas/
+output/
+video/
+*.mp4
+*.avi
+*.mov
+*.MP4
+
+# Images (keep in version control if necessary, but exclude generated ones)
+epoch*.jpg
+check_training_output.jpg
+
+# Pickle files
+*.pkl
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.venv
+env/
+venv/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Windows Zone.Identifier
+*:Zone.Identifier

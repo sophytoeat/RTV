@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 import sys
-sys.path.append(os.path.abspath(os.path.join(__file__, "..","..")))
+sys.path.append(os.path.abspath(os.path.join(__file__,"..", "..")))
 from collections import OrderedDict
 
 
@@ -11,27 +11,49 @@ from options.train_options import TrainOptions
 from model.pix2pixHD.models import create_model
 import util.util as util
 from util.visualizer import Visualizer
+from util.beta_utils import create_hybrid_input
 import torchvision
 import torch
 import math
-def lcm(a, b): return abs(a * b) / math.gcd(a, b) if a and b else 0
+def lcm(a, b): return abs(a * b) // math.gcd(a, b) if a and b else 0
 import time
 
 def main():
     opt = TrainOptions().parse()
+    # Check if β parameters should be used
+    use_beta_requested = getattr(opt, 'use_beta', False)
+    
+    # We will finalize use_beta after constructing dataset(s),
+    # because some datasets may not have β files and will auto-disable it.
+    
     if opt.dataset_path is not None:
         dataset_paths = opt.dataset_path
         path_list = dataset_paths.split(',')
-        dataset = UpperBodyGarment(path_list[0],img_size=opt.img_size)
+        dataset = UpperBodyGarment(path_list[0], img_size=opt.img_size, use_beta=use_beta_requested)
         if len(path_list) > 1:
-            for i in range(1,len(path_list)):
-                dataset = dataset + UpperBodyGarment(path_list[i], img_size=opt.img_size)
+            for i in range(1, len(path_list)):
+                dataset = dataset + UpperBodyGarment(path_list[i], img_size=opt.img_size, use_beta=use_beta_requested)
     else:
         print("Please specify a dataset for training!")
         exit(0)
+
+    # Finalize whether β is actually enabled based on datasets
+    use_beta = use_beta_requested
+    try:
+        # ConcatDataset has .datasets
+        if hasattr(dataset, 'datasets'):
+            use_beta = use_beta and all(getattr(ds, 'use_beta', False) for ds in dataset.datasets)
+        else:
+            use_beta = use_beta and getattr(dataset, 'use_beta', False)
+    except Exception:
+        use_beta = False
+
+    # Adjust input_nc based on finalized β usage: 6 (vm+dp) or 16 (vm+dp+β)
+    opt.input_nc = 16 if use_beta else 6
     dataset_size=len(dataset)
     dataloader=torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, sampler=None, batch_sampler=None, num_workers=0, collate_fn=None, pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, multiprocessing_context=None)
-    model=create_model(opt)
+    
+    model = create_model(opt)
     visualizer = Visualizer(opt)
     start_epoch, epoch_iter = 1, 0
     opt.print_freq = lcm(opt.print_freq, opt.batchSize)
@@ -50,7 +72,11 @@ def main():
             epoch_iter = epoch_iter % dataset_size
         for i, data in enumerate(dataloader):
             # forward
-            garment_img, vm_img, dp_img, garment_mask = data
+            if use_beta:
+                garment_img, vm_img, dp_img, garment_mask, beta = data
+            else:
+                garment_img, vm_img, dp_img, garment_mask = data
+                beta = None
             #pred_mask = model.forward(dp, garment_mask)
 
             if total_steps % opt.print_freq == print_delta:
@@ -63,7 +89,16 @@ def main():
             save_fake = total_steps % opt.display_freq == display_delta
 
             #losses, generated = model.module.forward_attention(vm_img, garment_img,attrn_mask, infer=save_fake)
-            input_img = torch.cat([vm_img,dp_img],1)
+            # Create Extended Hybrid Representation: I_hybrid' = I_vm ⊕ I_sdp ⊕ I_β
+            if use_beta and beta is not None:
+                # Convert beta list to numpy array if needed
+                if isinstance(beta, list):
+                    beta = np.array([b if b is not None else np.zeros(10, dtype=np.float32) for b in beta])
+                elif isinstance(beta, torch.Tensor):
+                    beta = beta.cpu().numpy()
+                input_img = create_hybrid_input(vm_img, dp_img, beta)
+            else:
+                input_img = torch.cat([vm_img,dp_img],1)
             gt_image=torch.cat([garment_img,garment_mask],1)
             losses, generated = model(input_img, gt_image, infer=save_fake)
 
