@@ -533,7 +533,7 @@ This system provides the following technical contributions:
 
 1. **Real β Parameter Extraction from BEV**: By setting `fix_body=False`, we obtain the actual body shape parameters estimated by BEV
 
-2. **10-Dimensional β Feature Map**: Expanded from conventional β[0] only to all 10 dimensions, conveying detailed body shape information to the network
+2. **10-Dimensional β Feature Map**: All 10 dimensions, conveying detailed body shape information to the network
 
 3. **Spatial Feature Map Conversion**: Converts β vector to (10, H, W) spatial tensor, making it processable by CNNs
 
